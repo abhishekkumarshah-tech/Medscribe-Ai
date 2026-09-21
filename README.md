@@ -1,7 +1,7 @@
-# CareNote AI
+# Medscribe AI
 
 AI-assisted clinical documentation prototype for a Healthcare Greenfield
-hackathon track. CareNote AI helps a doctor turn unstructured consultation
+hackathon track. Medscribe AI helps a doctor turn unstructured consultation
 notes into a structured documentation draft — it never diagnoses, never
 invents clinical information, and every AI draft must be reviewed, edited
 as needed, and explicitly approved by a doctor before it becomes a final
@@ -90,7 +90,7 @@ code references SQLite directly.
 ## Project structure
 
 ```
-carenote-ai/
+medscribe-ai/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py            FastAPI app, CORS, startup seed
