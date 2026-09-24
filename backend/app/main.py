@@ -1,7 +1,10 @@
 import os
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from .database import Base, engine
 from . import models
@@ -46,3 +49,18 @@ app.include_router(audit.router)
 @app.get("/api/health")
 def health():
     return {"status": "ok", "service": "Medscribe Ai backend"}
+
+
+# In the production container, the compiled React app is copied here. Serving
+# it from FastAPI keeps the UI and API on one public HTTPS origin, so deployed
+# browser requests do not need a separate CORS configuration.
+_frontend_dist = Path(__file__).resolve().parent / "static"
+_frontend_assets = _frontend_dist / "assets"
+
+if _frontend_dist.is_dir():
+    if _frontend_assets.is_dir():
+        app.mount("/assets", StaticFiles(directory=_frontend_assets), name="frontend-assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def serve_frontend(full_path: str):
+        return FileResponse(_frontend_dist / "index.html")

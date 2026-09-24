@@ -76,6 +76,27 @@ the demo credentials above.
 
 ---
 
+## Deploy on Render
+
+This repository includes a production Docker configuration and `render.yaml`
+Blueprint. It builds the React UI and serves it through the FastAPI service,
+so the website and API share one public HTTPS address.
+
+1. Push this project to a GitHub repository.
+2. In Render, select **New → Blueprint**, choose the repository, and deploy
+   the detected `render.yaml` file. If Render reports that the service name is
+   already taken, choose a unique service name.
+3. After the deploy completes, open the service's `onrender.com` URL. The
+   health check is available at `/api/health`.
+
+The Blueprint provisions a free PostgreSQL database and uses the mock drafting
+mode by default. Add `ANTHROPIC_API_KEY` in Render only if you explicitly want
+to enable Claude-based drafts. Free Render services can take about a minute to
+wake after being idle, and free databases expire after 30 days; use a paid plan
+for a persistent production deployment.
+
+---
+
 ## Switching to PostgreSQL
 
 ```bash
