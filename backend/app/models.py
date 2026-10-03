@@ -1,88 +1,123 @@
-"""
-SQLAlchemy models for CareNote AI.
+"""SQLAlchemy models for the Medscribe AI demo application."""
 
-Every state-changing action on a consultation (draft generated, edited,
-approved) is mirrored into AuditEvent — this is a product requirement,
-not an afterthought, since auditability is a core feature of a clinical
-documentation tool.
-"""
-import uuid
+from __future__ import annotations
+
 import datetime as dt
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, Enum
-from sqlalchemy.orm import relationship
 import enum
+import uuid
+
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
 
 from .database import Base
 
 
+def utcnow() -> dt.datetime:
+    """Return naive UTC for compatibility with existing SQLite/Postgres rows."""
+    return dt.datetime.now(dt.UTC).replace(tzinfo=None)
+
+
 def gen_id(prefix: str) -> str:
-    return f"{prefix}-{uuid.uuid4().hex[:8]}"
+    return f"{prefix}-{uuid.uuid4().hex}"
 
 
-class ConsultationStatus(str, enum.Enum):
-    draft_pending = "draft_pending"      # notes entered, no AI draft yet
-    ai_drafted = "ai_drafted"            # AI draft generated, awaiting review
-    pending_review = "pending_review"    # doctor is editing
-    approved = "approved"                # doctor approved -> final record
+class ConsultationStatus(enum.StrEnum):
+    draft_pending = "draft_pending"
+    ai_drafted = "ai_drafted"
+    pending_review = "pending_review"
+    approved = "approved"
 
 
 class Doctor(Base):
     __tablename__ = "doctors"
+
     id = Column(String, primary_key=True, default=lambda: gen_id("DOC"))
-    name = Column(String, nullable=False)
-    email = Column(String, unique=True, nullable=False)
-    password_hash = Column(String, nullable=False)
-    specialty = Column(String, default="General Medicine")
-    created_at = Column(DateTime, default=dt.datetime.utcnow)
+    name = Column(String(200), nullable=False)
+    email = Column(String(254), unique=True, nullable=False, index=True)
+    password_hash = Column(String(512), nullable=False)
+    specialty = Column(String(120), nullable=False, default="General Medicine")
+    created_at = Column(DateTime, nullable=False, default=utcnow)
 
     consultations = relationship("Consultation", back_populates="doctor")
+    sessions = relationship("AuthSession", back_populates="doctor", cascade="all, delete-orphan")
 
 
 class Patient(Base):
     __tablename__ = "patients"
-    id = Column(String, primary_key=True, default=lambda: gen_id("P"))
-    name = Column(String, nullable=False)
-    age = Column(Integer, nullable=False)
-    sex = Column(String, nullable=True)
-    mrn = Column(String, nullable=True)  # synthetic medical record number
-    notes = Column(Text, default="")  # e.g. known allergies, demo-only
-    created_at = Column(DateTime, default=dt.datetime.utcnow)
 
+    id = Column(String, primary_key=True, default=lambda: gen_id("P"))
+    # Nullable only to permit a safe in-place migration of pre-tenant demo DBs.
+    # All new records are assigned to the authenticated doctor and API queries
+    # never expose unowned rows.
+    doctor_id = Column(
+        String, ForeignKey("doctors.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    name = Column(String(200), nullable=False)
+    age = Column(Integer, nullable=False)
+    sex = Column(String(64), nullable=True)
+    mrn = Column(String(80), nullable=True)
+    notes = Column(Text, nullable=False, default="")
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    doctor = relationship("Doctor")
     consultations = relationship("Consultation", back_populates="patient")
 
 
 class Consultation(Base):
     __tablename__ = "consultations"
+
     id = Column(String, primary_key=True, default=lambda: gen_id("C"))
-    patient_id = Column(String, ForeignKey("patients.id"), nullable=False)
-    doctor_id = Column(String, ForeignKey("doctors.id"), nullable=False)
+    patient_id = Column(String, ForeignKey("patients.id"), nullable=False, index=True)
+    doctor_id = Column(String, ForeignKey("doctors.id"), nullable=False, index=True)
 
-    raw_notes = Column(Text, default="")          # unstructured doctor input
-    ai_draft = Column(Text, default="")            # AI-generated structured draft
-    edited_draft = Column(Text, default="")        # doctor-edited version
-    final_record = Column(Text, default="")        # approved final text
+    raw_notes = Column(Text, nullable=False, default="")
+    ai_draft = Column(Text, nullable=False, default="")
+    edited_draft = Column(Text, nullable=False, default="")
+    final_record = Column(Text, nullable=False, default="")
 
-    status = Column(Enum(ConsultationStatus), default=ConsultationStatus.draft_pending)
+    status = Column(
+        Enum(ConsultationStatus),
+        nullable=False,
+        default=ConsultationStatus.draft_pending,
+    )
 
-    ai_model_used = Column(String, default="")
+    ai_model_used = Column(String(120), nullable=False, default="")
     ai_generated_at = Column(DateTime, nullable=True)
     approved_at = Column(DateTime, nullable=True)
-    approved_by = Column(String, nullable=True)
+    approved_by = Column(String(200), nullable=True)
 
-    created_at = Column(DateTime, default=dt.datetime.utcnow)
-    updated_at = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+    updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow)
 
     patient = relationship("Patient", back_populates="consultations")
     doctor = relationship("Doctor", back_populates="consultations")
 
 
 class AuditEvent(Base):
-    """Immutable log of every meaningful action for compliance/auditability."""
+    """Append-only audit record; no application route permits edits or deletion."""
+
     __tablename__ = "audit_events"
+
     id = Column(String, primary_key=True, default=lambda: gen_id("AUD"))
-    timestamp = Column(DateTime, default=dt.datetime.utcnow)
-    actor = Column(String, nullable=False)          # doctor name/email or "system"
-    action = Column(String, nullable=False)         # e.g. "AI_DRAFT_GENERATED"
-    resource_type = Column(String, nullable=False)  # e.g. "consultation"
-    resource_id = Column(String, nullable=False)
-    detail = Column(Text, default="")
+    timestamp = Column(DateTime, nullable=False, default=utcnow)
+    actor = Column(String(254), nullable=False)
+    action = Column(String(80), nullable=False)
+    resource_type = Column(String(80), nullable=False)
+    resource_id = Column(String(100), nullable=False)
+    # Keep event details metadata-only; do not duplicate clinical notes here.
+    detail = Column(Text, nullable=False, default="")
+
+
+class AuthSession(Base):
+    """Persisted opaque session. Only a SHA-256 token hash is stored."""
+
+    __tablename__ = "auth_sessions"
+
+    token_hash = Column(String(64), primary_key=True)
+    doctor_id = Column(
+        String, ForeignKey("doctors.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+    expires_at = Column(DateTime, nullable=False, index=True)
+
+    doctor = relationship("Doctor", back_populates="sessions")

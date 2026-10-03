@@ -5,35 +5,31 @@ import type { Consultation, Patient } from '../types';
 export default function FinalRecord({ consultation, patient }: { consultation: Consultation; patient: Patient | null }) {
   return (
     <div className="max-w-3xl space-y-5">
-      <div className="flex items-center gap-2.5 bg-status-approvedBg text-status-approved rounded-md px-4 py-3 text-sm">
-        <CheckCircle2 size={17} />
+      <div className="flex items-start gap-2.5 rounded-md bg-status-approvedBg px-4 py-3 text-sm text-status-approved sm:items-center">
+        <CheckCircle2 size={17} className="mt-0.5 shrink-0 sm:mt-0" aria-hidden="true" />
         <span>
-          Approved by {consultation.approved_by} on{' '}
-          {consultation.approved_at && new Date(consultation.approved_at).toLocaleString()}
+          Approved by {consultation.approved_by || 'clinician'}
+          {consultation.approved_at ? ` on ${new Date(consultation.approved_at).toLocaleString()}` : ''}
         </span>
       </div>
 
-      <div className="bg-surface border border-line rounded-lg shadow-card">
-        <div className="px-6 py-4 border-b border-line flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-ink-900">Final clinical record</h3>
-            <p className="text-xs text-ink-500 mt-0.5">{patient?.name} · {consultation.patient_id}</p>
+      <section className="rounded-lg border border-line bg-surface shadow-card">
+        <div className="flex flex-col gap-2 border-b border-line px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-ink-900">Final clinical record</h2>
+            <p className="mt-0.5 break-words text-xs text-ink-500">{patient?.name || 'Patient'} · {consultation.patient_id}</p>
           </div>
-          <span className="font-mono text-xs text-ink-300">{consultation.id}</span>
+          <span className="break-all font-mono text-xs text-ink-500">{consultation.id}</span>
         </div>
-        <div className="px-6 py-5">
-          <pre className="whitespace-pre-wrap font-sans text-sm text-ink-900 leading-relaxed">
-            {consultation.final_record}
-          </pre>
+        <div className="px-5 py-5 sm:px-6">
+          <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed text-ink-900">{consultation.final_record}</pre>
         </div>
-      </div>
+      </section>
 
-      <div className="flex items-start gap-2.5 text-xs text-ink-500">
-        <ShieldCheck size={15} className="mt-0.5 shrink-0" />
+      <div className="flex items-start gap-2.5 text-xs leading-relaxed text-ink-500">
+        <ShieldCheck size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
         <p>
-          This record was generated with AI assistance (model: {consultation.ai_model_used}) and reviewed
-          and approved by a licensed doctor before being finalized. The full edit history is available in
-          the audit trail.
+          Drafting source: {consultation.ai_model_used || 'not recorded'}. This output may be incomplete or incorrect and is not a diagnosis; it was explicitly approved by a clinician. Review the source notes if clarification is needed.
         </p>
       </div>
     </div>

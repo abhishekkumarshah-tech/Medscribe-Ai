@@ -7,35 +7,21 @@ export default function Settings() {
 
   return (
     <Layout title="Settings" subtitle="Account and workspace preferences">
-      <div className="max-w-xl bg-surface border border-line rounded-lg shadow-card p-6 space-y-5">
+      <section className="max-w-xl space-y-5 rounded-lg border border-line bg-surface p-6 shadow-card">
         <div>
-          <label className="block text-xs font-medium text-ink-700 mb-1.5">Name</label>
-          <input
-            readOnly
-            value={doctor?.name || ''}
-            className="w-full rounded-md border border-line px-3 py-2 text-sm text-ink-900 bg-surface-muted"
-          />
+          <label htmlFor="settings-name" className="mb-1.5 block text-xs font-medium text-ink-700">Name</label>
+          <input id="settings-name" readOnly value={doctor?.name || ''} className="w-full rounded-md border border-line bg-surface-muted px-3 py-2 text-sm text-ink-900" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-ink-700 mb-1.5">Email</label>
-          <input
-            readOnly
-            value={doctor?.email || ''}
-            className="w-full rounded-md border border-line px-3 py-2 text-sm text-ink-900 bg-surface-muted"
-          />
+          <label htmlFor="settings-email" className="mb-1.5 block text-xs font-medium text-ink-700">Email</label>
+          <input id="settings-email" readOnly value={doctor?.email || ''} className="w-full rounded-md border border-line bg-surface-muted px-3 py-2 text-sm text-ink-900" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-ink-700 mb-1.5">Specialty</label>
-          <input
-            readOnly
-            value={doctor?.specialty || ''}
-            className="w-full rounded-md border border-line px-3 py-2 text-sm text-ink-900 bg-surface-muted"
-          />
+          <label htmlFor="settings-specialty" className="mb-1.5 block text-xs font-medium text-ink-700">Specialty</label>
+          <input id="settings-specialty" readOnly value={doctor?.specialty || ''} className="w-full rounded-md border border-line bg-surface-muted px-3 py-2 text-sm text-ink-900" />
         </div>
-        <p className="text-xs text-ink-500 pt-2 border-t border-line">
-          Account settings are read-only in this prototype.
-        </p>
-      </div>
+        <p className="border-t border-line pt-3 text-xs text-ink-500">Account profile fields are read-only in this demo. Session tokens expire after the configured session lifetime.</p>
+      </section>
     </Layout>
   );
 }

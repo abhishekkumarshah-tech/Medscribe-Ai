@@ -1,8 +1,9 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.js";
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
 }
 
@@ -15,6 +16,7 @@ body {
   background: #CFE7E3;
 }
 
-textarea, input {
+textarea,
+input {
   font-family: inherit;
 }
