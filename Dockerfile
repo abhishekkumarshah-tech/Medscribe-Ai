@@ -1,4 +1,4 @@
-# Build the Vite frontend first, then package it with the FastAPI service.
+# Build the Vite application once and serve the compiled assets through FastAPI.
 FROM node:22-bookworm-slim AS frontend-build
 
 WORKDIR /app/frontend
@@ -18,4 +18,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./
 COPY --from=frontend-build /app/frontend/dist ./app/static
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}"]
+RUN groupadd --system medscribe \
+    && useradd --system --gid medscribe --home-dir /app medscribe \
+    && chown -R medscribe:medscribe /app
+USER medscribe
+
+EXPOSE 10000
+CMD ["sh", "-c", "python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}"]

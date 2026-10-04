@@ -5,57 +5,60 @@ import Layout from '../components/Layout';
 const CONTROLS = [
   {
     icon: Lock,
-    title: 'Access control',
-    body: 'Only authenticated doctors can view patient notes and drafts. Sessions are scoped per doctor account.',
+    title: 'Account-scoped access',
+    body: 'Authenticated accounts see only their own patient and consultation records. Sessions are persisted server-side, expire automatically, and can be revoked on sign out.',
   },
   {
     icon: ShieldCheck,
-    title: 'Audit logging',
-    body: 'Every notes entry, AI draft generation, edit, and approval is written to an immutable audit trail with actor, timestamp, and resource.',
+    title: 'Audit events',
+    body: 'Patient creation, consultation creation, draft generation, draft edits, failures, and approvals are recorded with an actor, timestamp, and resource ID. Event details avoid copying clinical notes.',
   },
   {
     icon: Database,
     title: 'Data minimization',
-    body: 'The AI service receives only the consultation notes and minimal patient context needed to structure a draft — nothing more.',
+    body: 'The default offline structurer receives only the consultation text. If a hosted AI provider is configured, only that text is sent; patient name, age, and sex are not added as context.',
   },
   {
     icon: Eye,
     title: 'Human oversight',
-    body: 'AI output is always labelled as an AI-generated draft. No content reaches a final clinical record without an explicit doctor approval step.',
+    body: 'Generated content is labelled as a draft. The application requires a clinician review and explicit approval before a final record is saved.',
   },
 ];
 
 export default function PrivacySecurity() {
   return (
-    <Layout title="Privacy & Security" subtitle="How Medscribe Ai protects patient data and keeps a human in the loop">
+    <Layout title="Privacy & Security" subtitle="Data handling and human oversight in the Medscribe demo">
       <div className="max-w-3xl space-y-6">
-        <div className="flex items-start gap-3 bg-brand-100 text-brand-900 rounded-lg px-5 py-4 text-sm">
-          <FileWarning size={18} className="mt-0.5 shrink-0" />
+        <div className="flex items-start gap-3 rounded-lg bg-brand-100 px-5 py-4 text-sm text-brand-900">
+          <FileWarning size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
           <p>
-            This is a hackathon prototype using only synthetic, demo patient data. It is a documentation
-            assistance tool, not a diagnostic system, and is not intended for use with real patient data.
+            This is a prototype for synthetic data only. Do not enter real patient information. It is not a diagnostic system and has not been assessed or certified for clinical use or regulatory compliance.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {CONTROLS.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="bg-surface border border-line rounded-lg shadow-card p-5">
-              <Icon size={18} className="text-brand-700 mb-3" strokeWidth={1.8} />
-              <h3 className="text-sm font-semibold text-ink-900 mb-1.5">{title}</h3>
-              <p className="text-xs text-ink-500 leading-relaxed">{body}</p>
-            </div>
+            <section key={title} className="rounded-lg border border-line bg-surface p-5 shadow-card">
+              <Icon size={18} className="mb-3 text-brand-700" strokeWidth={1.8} aria-hidden="true" />
+              <h2 className="mb-1.5 text-sm font-semibold text-ink-900">{title}</h2>
+              <p className="text-xs leading-relaxed text-ink-500">{body}</p>
+            </section>
           ))}
         </div>
 
-        <div className="bg-surface border border-line rounded-lg shadow-card p-5">
-          <h3 className="text-sm font-semibold text-ink-900 mb-2">AI use disclosure</h3>
-          <p className="text-sm text-ink-700 leading-relaxed">
-            Medscribe Ai never diagnoses patients and never adds clinical information that was not present
-            in the doctor's own notes. Any suspected condition mentioned by the doctor is presented as
-            "noted by physician," not as a confirmed diagnosis. A licensed doctor must review, edit as
-            needed, and explicitly approve every draft before it becomes part of the final clinical record.
+        <section className="rounded-lg border border-line bg-surface p-5 shadow-card">
+          <h2 className="mb-2 text-sm font-semibold text-ink-900">AI provider disclosure</h2>
+          <p className="text-sm leading-relaxed text-ink-700">
+            Without an AI key, the app performs conservative local note structuring. If an Anthropic API key is configured, consultation text is sent to Anthropic for drafting and is subject to the provider's terms and retention practices. Only configure a hosted AI service after appropriate privacy, security, and legal review; this demo must not process real patient information.
           </p>
-        </div>
+        </section>
+
+        <section className="rounded-lg border border-line bg-surface p-5 shadow-card">
+          <h2 className="mb-2 text-sm font-semibold text-ink-900">Clinical oversight</h2>
+          <p className="text-sm leading-relaxed text-ink-700">
+            Medscribe AI does not provide a guaranteed diagnosis. Generated drafts may be incomplete or incorrect. A clinician must verify all content against the source notes and explicitly approve a final record. Application audit events are append-only through the user interface; this is not a tamper-proof compliance audit system.
+          </p>
+        </section>
       </div>
     </Layout>
   );

@@ -5,12 +5,24 @@ export interface Doctor {
   specialty: string;
 }
 
+export interface AuthConfig {
+  allow_signup: boolean;
+  demo_login_enabled: boolean;
+}
+
 export interface Patient {
   id: string;
   name: string;
   age: number;
+  sex?: string | null;
+  mrn?: string | null;
+  notes?: string | null;
+}
+
+export interface PatientCreate {
+  name: string;
+  age: number;
   sex?: string;
-  mrn?: string;
   notes?: string;
 }
 
@@ -41,4 +53,9 @@ export interface AuditEvent {
   resource_type: string;
   resource_id: string;
   detail: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  doctor: Doctor;
 }
