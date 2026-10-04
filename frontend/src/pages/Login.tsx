@@ -144,7 +144,7 @@ export default function Login() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || authLoading}
               className="w-full rounded-md bg-brand-700 text-white text-sm font-medium py-2.5 hover:bg-brand-900 transition-colors disabled:opacity-60"
             >
               {loading ? (mode === 'register' ? 'Creating account…' : 'Signing in…') : (mode === 'register' ? 'Create account' : 'Sign in')}
@@ -174,7 +174,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={useDemo}
-                disabled={loading}
+                disabled={loading || authLoading}
                 className="w-full rounded-md border border-line text-sm font-medium py-2.5 text-ink-700 hover:bg-surface-muted transition-colors disabled:opacity-60"
               >
                 Use local demo account

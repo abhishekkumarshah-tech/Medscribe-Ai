@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { AuthConfig, Doctor } from '../types';
-import { api } from './api';
+import { api, clearSessionToken, getSessionToken, setSessionToken } from './api';
 
 interface AuthContextValue {
   doctor: Doctor | null;
@@ -15,22 +15,16 @@ interface AuthContextValue {
 const DEFAULT_AUTH_CONFIG: AuthConfig = { allow_signup: false, demo_login_enabled: false };
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-function storeSessionToken(token: string) {
-  try {
-    sessionStorage.setItem('carenote_token', token);
-  } catch {
-    throw new Error('This browser blocked session storage. Enable it for this site to sign in.');
-  }
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [loading, setLoading] = useState(true);
   const [authConfig, setAuthConfig] = useState<AuthConfig>(DEFAULT_AUTH_CONFIG);
   const [logoutWarning, setLogoutWarning] = useState('');
+  const authAttemptVersion = useRef(0);
 
   useEffect(() => {
     let active = true;
+    const initialAuthAttempt = authAttemptVersion.current;
     const onSessionExpired = () => {
       if (active) setDoctor(null);
     };
@@ -40,28 +34,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener('medscribe:session-expired', onSessionExpired);
     window.addEventListener('medscribe:storage-unavailable', onStorageUnavailable);
 
-    let token: string | null = null;
-    try {
-      token = sessionStorage.getItem('carenote_token');
-    } catch {
-      token = null;
-      onStorageUnavailable();
-    }
+    const token = getSessionToken();
 
     const configRequest = api.authConfig().catch(() => DEFAULT_AUTH_CONFIG);
     const doctorRequest = token
       ? api.me().catch(() => {
-          try {
-            sessionStorage.removeItem('carenote_token');
-          } catch {
-            onStorageUnavailable();
-          }
+          if (!clearSessionToken(token)) onStorageUnavailable();
           return null;
         })
       : Promise.resolve(null);
 
     Promise.all([configRequest, doctorRequest]).then(([config, currentDoctor]) => {
-      if (!active) return;
+      if (!active || authAttemptVersion.current !== initialAuthAttempt) return;
       setAuthConfig(config);
       setDoctor(currentDoctor);
       setLoading(false);
@@ -76,26 +60,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function login(email: string, password: string) {
     const { token, doctor: currentDoctor } = await api.login(email, password);
-    storeSessionToken(token);
-    setLogoutWarning('');
+    const stored = setSessionToken(token);
+    authAttemptVersion.current += 1;
+    setLoading(false);
+    setLogoutWarning(stored ? '' : 'Session storage is blocked; this sign-in will last only until you reload or close this tab.');
     setDoctor(currentDoctor);
   }
 
   async function register(name: string, email: string, password: string, specialty: string) {
     const { token, doctor: currentDoctor } = await api.register(name, email, password, specialty);
-    storeSessionToken(token);
-    setLogoutWarning('');
+    const stored = setSessionToken(token);
+    authAttemptVersion.current += 1;
+    setLoading(false);
+    setLogoutWarning(stored ? '' : 'Session storage is blocked; this sign-in will last only until you reload or close this tab.');
     setDoctor(currentDoctor);
   }
 
   async function logout() {
+    authAttemptVersion.current += 1;
     const revokeRequest = api.logout();
-    let warning = '';
-    try {
-      sessionStorage.removeItem('carenote_token');
-    } catch {
-      warning = 'This browser could not clear its saved session token.';
-    }
+    let warning = clearSessionToken() ? '' : 'This browser could not clear its saved session token.';
     setDoctor(null);
 
     try {

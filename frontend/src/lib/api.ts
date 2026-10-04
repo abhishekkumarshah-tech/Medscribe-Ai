@@ -12,12 +12,44 @@ const BASE = (import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '');
 const DEFAULT_TIMEOUT_MS = 30_000;
 const AI_TIMEOUT_MS = 90_000;
 
-function authHeader(): string | null {
+let inMemorySessionToken: string | null = null;
+
+export function getSessionToken(): string | null {
+  if (inMemorySessionToken) return inMemorySessionToken;
   try {
-    return sessionStorage.getItem('carenote_token');
+    inMemorySessionToken = sessionStorage.getItem('carenote_token');
+    return inMemorySessionToken;
   } catch {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('medscribe:storage-unavailable'));
+    }
     return null;
   }
+}
+
+export function setSessionToken(token: string): boolean {
+  inMemorySessionToken = token;
+  try {
+    sessionStorage.setItem('carenote_token', token);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function clearSessionToken(expectedToken?: string | null): boolean {
+  if (expectedToken !== undefined && getSessionToken() !== expectedToken) return true;
+  inMemorySessionToken = null;
+  try {
+    sessionStorage.removeItem('carenote_token');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function authHeader(): string | null {
+  return getSessionToken();
 }
 
 function errorMessage(body: unknown, status: number): string {
@@ -65,12 +97,14 @@ async function request<T>(path: string, options: RequestInit = {}, timeoutMs = D
 
       const isAuthRoute = path === '/auth/login' || path === '/auth/register' || path === '/auth/config';
       if (response.status === 401 && !isAuthRoute && typeof window !== 'undefined') {
-        try {
-          sessionStorage.removeItem('carenote_token');
-        } catch {
-          window.dispatchEvent(new Event('medscribe:storage-unavailable'));
+        // An older in-flight request must not clear a newer successful login.
+        const currentToken = getSessionToken();
+        if (currentToken === token) {
+          if (!clearSessionToken(token)) {
+            window.dispatchEvent(new Event('medscribe:storage-unavailable'));
+          }
+          window.dispatchEvent(new Event('medscribe:session-expired'));
         }
-        window.dispatchEvent(new Event('medscribe:session-expired'));
       }
       throw new Error(errorMessage(body, response.status));
     }
